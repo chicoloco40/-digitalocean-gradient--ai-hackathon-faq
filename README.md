@@ -28,7 +28,7 @@ The **DigitalOcean Gradient™ AI Hackathon** is a community event hosted throug
 Key links:
 - [DigitalOcean Gradient](https://www.digitalocean.com/products/gradient)
 - [MLH Community Discord](https://discord.gg/mlh)
-- Support channel: **#digitalocean-gradient™-ai-hackathon-faq**
+- Support channel: **#digitalocean-gradient-ai-hackathon-faq**
 
 ---
 
@@ -261,7 +261,7 @@ All services are available via the [DigitalOcean control panel](https://cloud.di
 |---|---|
 | DigitalOcean Docs | https://docs.digitalocean.com |
 | DigitalOcean Community | https://www.digitalocean.com/community |
-| MLH Discord (hackathon channel) | `#digitalocean-gradient™-ai-hackathon-faq` |
+| MLH Discord (hackathon channel) | `#digitalocean-gradient-ai-hackathon-faq` |
 | Submit a support ticket | Open a ticket in the MLH Discord server |
 | CL40 World project contact | music@cl40.world |
 
