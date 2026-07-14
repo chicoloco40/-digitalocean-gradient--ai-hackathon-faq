@@ -170,7 +170,7 @@ def fetch_articles(feed_url: str) -> list[dict]:
 def ai_summarize(text: str) -> str:
     resp = requests.post(
         "https://api.gradient.ai/v1/completions",
-        headers={"Authorization": f"******"},
+        headers={"Authorization": f"Bearer {GRADIENT_API_KEY}"},
         json={"model": "llama-3-8b-instruct", "prompt": f"Summarize: {text}", "max_tokens": 150},
     )
     return resp.json()["choices"][0]["text"].strip()
@@ -216,9 +216,9 @@ For pipelines processing millions of events or large media files:
 
 When a Discord bot serves many servers or high-frequency events:
 
-1. **Shard the bot** using Discord's [sharding API](https://discordjs.guide/sharding/) — one shard per ~2 500 guilds.
+1. **Shard the bot** using Discord's [sharding API](https://discordjs.guide/sharding/) — one shard per ~2,500 guilds.
 2. **Run each shard** as a separate App Platform Worker or Kubernetes Pod.
-3. **Centralise state** in a Managed Redis cluster (shared across shards).
+3. **Centralize state** in a Managed Redis cluster (shared across shards).
 4. **Rate-limit awareness** — implement exponential back-off on Discord API errors (`429 Too Many Requests`).
 5. **Metrics** — export shard health metrics to DigitalOcean Monitoring or a self-hosted Prometheus/Grafana stack on a Droplet.
 
