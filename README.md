@@ -162,16 +162,22 @@ import os
 GRADIENT_API_KEY = os.environ["GRADIENT_API_KEY"]
 DISCORD_WEBHOOK  = os.environ["DISCORD_WEBHOOK_URL"]
 
+# Confirm the correct endpoint in the official DigitalOcean Gradient API docs:
+# https://docs.digitalocean.com/products/gradient/
+GRADIENT_API_URL = "https://api.gradient.ai/v1/completions"
+
 def fetch_articles(feed_url: str) -> list[dict]:
     feed = feedparser.parse(feed_url)
     return [{"title": e.title, "summary": e.summary, "link": e.link}
             for e in feed.entries[:5]]
 
 def ai_summarize(text: str) -> str:
+    # Truncate and strip to avoid prompt injection and excessive token usage.
+    safe_text = text[:500].replace("\n", " ").strip()
     resp = requests.post(
-        "https://api.gradient.ai/v1/completions",
+        GRADIENT_API_URL,
         headers={"Authorization": f"Bearer {GRADIENT_API_KEY}"},
-        json={"model": "llama-3-8b-instruct", "prompt": f"Summarize: {text}", "max_tokens": 150},
+        json={"model": "llama-3-8b-instruct", "prompt": f"Summarize: {safe_text}", "max_tokens": 150},
     )
     return resp.json()["choices"][0]["text"].strip()
 
