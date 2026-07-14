@@ -165,7 +165,7 @@ DISCORD_WEBHOOK  = os.environ["DISCORD_WEBHOOK_URL"]
 
 # Confirm the correct endpoint in the official DigitalOcean Gradient API docs:
 # https://docs.digitalocean.com/products/gradient/
-GRADIENT_API_URL = "https://api.gradient.ai/v1/completions"
+GRADIENT_API_URL = "https://api.gradient.ai/v1/chat/completions"
 
 def fetch_articles(feed_url: str) -> list[dict]:
     feed = feedparser.parse(feed_url)
@@ -173,25 +173,28 @@ def fetch_articles(feed_url: str) -> list[dict]:
             for e in feed.entries[:5]]
 
 def ai_summarize(text: str) -> str:
-    # Sanitize input to reduce prompt injection risk:
-    # truncate length, remove newlines, and strip characters commonly
-    # used to inject instructions (angle brackets, backticks, dashes).
-    safe_text = re.sub(r'[<>`#\-]{2,}', '', text[:500]).replace('\n', ' ').strip()
-    resp = requests.post(
-        GRADIENT_API_URL,
-        headers={"Authorization": f"Bearer {GRADIENT_API_KEY}"},
-        json={
-            "model": "llama-3-8b-instruct",
-            # Use a fixed system instruction and place user content in a
-            # separate field to limit model manipulation by feed content.
-            "messages": [
-                {"role": "system", "content": "You are a news summarizer. Summarize the following article excerpt in 2 sentences."},
-                {"role": "user",   "content": safe_text},
-            ],
-            "max_tokens": 150,
-        },
-    )
-    return resp.json()["choices"][0]["message"]["content"].strip()
+    # Sanitize: whitelist safe chars only to block prompt injection.
+    safe_text = re.sub(r'[^\w\s.,!?;\'-]', '', text[:500]).replace('\n', ' ').strip()
+    try:
+        resp = requests.post(
+            GRADIENT_API_URL,
+            headers={"Authorization": f"Bearer {GRADIENT_API_KEY}"},
+            json={
+                "model": "llama-3-8b-instruct",
+                # Fixed system instruction; user content is isolated in its own role.
+                "messages": [
+                    {"role": "system", "content": "You are a news summarizer. Summarize the following article excerpt in 2 sentences."},
+                    {"role": "user",   "content": safe_text},
+                ],
+                "max_tokens": 150,
+            },
+            timeout=15,
+        )
+        resp.raise_for_status()
+        return resp.json()["choices"][0]["message"]["content"].strip()
+    except (requests.RequestException, KeyError, IndexError) as exc:
+        print(f"Summarization failed: {exc}")
+        return ""
 
 def post_to_discord(title: str, summary: str, link: str) -> None:
     requests.post(DISCORD_WEBHOOK, json={
@@ -201,7 +204,8 @@ def post_to_discord(title: str, summary: str, link: str) -> None:
 if __name__ == "__main__":
     for article in fetch_articles("https://example.com/rss"):
         summary = ai_summarize(article["summary"])
-        post_to_discord(article["title"], summary, article["link"])
+        if summary:
+            post_to_discord(article["title"], summary, article["link"])
 ```
 
 Deploy as an **App Platform cron job** (runs on schedule without a persistent server).
