@@ -156,6 +156,7 @@ An algorithmic journalism syndication pipeline ingests news/content data, applie
 
 ```python
 import feedparser
+import re
 import requests
 import os
 
@@ -172,14 +173,25 @@ def fetch_articles(feed_url: str) -> list[dict]:
             for e in feed.entries[:5]]
 
 def ai_summarize(text: str) -> str:
-    # Truncate and strip to avoid prompt injection and excessive token usage.
-    safe_text = text[:500].replace("\n", " ").strip()
+    # Sanitize input to reduce prompt injection risk:
+    # truncate length, remove newlines, and strip characters commonly
+    # used to inject instructions (angle brackets, backticks, dashes).
+    safe_text = re.sub(r'[<>`#\-]{2,}', '', text[:500]).replace('\n', ' ').strip()
     resp = requests.post(
         GRADIENT_API_URL,
         headers={"Authorization": f"Bearer {GRADIENT_API_KEY}"},
-        json={"model": "llama-3-8b-instruct", "prompt": f"Summarize: {safe_text}", "max_tokens": 150},
+        json={
+            "model": "llama-3-8b-instruct",
+            # Use a fixed system instruction and place user content in a
+            # separate field to limit model manipulation by feed content.
+            "messages": [
+                {"role": "system", "content": "You are a news summarizer. Summarize the following article excerpt in 2 sentences."},
+                {"role": "user",   "content": safe_text},
+            ],
+            "max_tokens": 150,
+        },
     )
-    return resp.json()["choices"][0]["text"].strip()
+    return resp.json()["choices"][0]["message"]["content"].strip()
 
 def post_to_discord(title: str, summary: str, link: str) -> None:
     requests.post(DISCORD_WEBHOOK, json={
